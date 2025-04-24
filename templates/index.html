@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Análisis Dólar Cuba</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .form-group { margin: 20px 0; }
+        input[type="number"] { padding: 8px; width: 200px; }
+        button { padding: 8px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .resultados { background: #f8f9fa; padding: 20px; margin-top: 20px; border-radius: 5px; }
+        .metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .metrica { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h1>Análisis de Inversión en Dólar Informal Cubano</h1>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label>Capital Disponible (USD): </label>
+            <input type="number" name="capital" step="100" value="{{ capital }}" required>
+            <button type="submit">Calcular</button>
+        </div>
+    </form>
+
+    {% if analisis %}
+    <div class="resultados">
+        <h2>Recomendación Actual</h2>
+        <div class="metricas">
+            <div class="metrica">
+                <h3>Acción Recomendada</h3>
+                <p style="font-size: 24px; color: {% if analisis.accion == 'COMPRAR' %}#28a745{% else %}#dc3545{% endif %}">
+                    {{ analisis.accion }} ${{ "%.2f"|format(analisis.inversion) }}
+                </p>
+            </div>
+            
+            <div class="metrica">
+                <h3>Probabilidades</h3>
+                <p>Subida: {{ "%.1f"|format(analisis.prob_subida) }}%</p>
+                <p>Bajada: {{ "%.1f"|format(analisis.prob_bajada) }}%</p>
+            </div>
+            
+            <div class="metrica">
+                <h3>Rentabilidad/Riesgo</h3>
+                <p>Esperada: {{ "%.1f"|format(analisis.rent_esperada) }}%</p>
+                <p>Peor caso (95%): {{ "%.1f"|format(analisis.var_95) }}%</p>
+                <p>Mejor caso: {{ "%.1f"|format(analisis.mejor_escenario) }}%</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {{ grafico|safe }}
+    
+    {% if analisis %}
+    <div class="resultados">
+        <h2>Métricas Clave</h2>
+        <div class="metricas">
+            <div class="metrica">
+                <h3>Precio Actual</h3>
+                <p>{{ "%.2f"|format(analisis.precio_actual) }} CUP/USD</p>
+            </div>
+            <div class="metrica">
+                <h3>Volatilidad Mensual</h3>
+                <p>{{ "%.1f"|format(analisis.sigma) }}%</p>
+            </div>
+            <div class="metrica">
+                <h3>Tendencia Histórica</h3>
+                <p>{{ "%.1f"|format(analisis.mu) }}% mensual</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>

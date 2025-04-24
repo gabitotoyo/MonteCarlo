@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = [
+    "gcc",
+    "zlib.dev",
+    "zlib.out",
+    "libffi",
+    "openssl"
+]
