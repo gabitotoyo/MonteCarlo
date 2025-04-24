@@ -4,12 +4,14 @@
     <title>Análisis Dólar Cuba</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .form-group { margin: 20px 0; }
-        input[type="number"] { padding: 8px; width: 200px; }
+        .form-group { margin: 20px 0; display: flex; gap: 20px; align-items: center; }
+        input[type="number"] { padding: 8px; width: 150px; }
         button { padding: 8px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
         .resultados { background: #f8f9fa; padding: 20px; margin-top: 20px; border-radius: 5px; }
         .metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
         .metrica { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .leyenda { margin-top: 20px; font-size: 0.9em; color: #666; }
+        .highlight { color: #28a745; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -17,32 +19,37 @@
     
     <form method="POST">
         <div class="form-group">
-            <label>Capital Disponible (USD): </label>
-            <input type="number" name="capital" step="100" value="{{ capital }}" required>
+            <div>
+                <label>Capital Disponible (USD): </label>
+                <input type="number" name="capital" step="any" value="{{ capital }}" required>
+            </div>
+            <div>
+                <label>Meses de inversión: </label>
+                <input type="number" name="meses" min="1" value="{{ meses }}" required>
+            </div>
             <button type="submit">Calcular</button>
         </div>
     </form>
 
     {% if analisis %}
     <div class="resultados">
-        <h2>Recomendación Actual</h2>
+        <h2>Recomendación para {{ analisis.meses }} mes{{ 'es' if analisis.meses > 1 else '' }}</h2>
         <div class="metricas">
             <div class="metrica">
                 <h3>Acción Recomendada</h3>
-                <p style="font-size: 24px; color: {% if analisis.accion == 'COMPRAR' %}#28a745{% else %}#dc3545{% endif %}">
+                <p style="font-size: 24px; color: {% if analisis.accion == 'COMPRAR' %}#28a745{% else %}#dc3545{% endif %};">
                     {{ analisis.accion }} ${{ "%.2f"|format(analisis.inversion) }}
                 </p>
             </div>
             
             <div class="metrica">
-                <h3>Probabilidades</h3>
-                <p>Subida: {{ "%.1f"|format(analisis.prob_subida) }}%</p>
-                <p>Bajada: {{ "%.1f"|format(analisis.prob_bajada) }}%</p>
+                <h3>Rentabilidad Esperada</h3>
+                <p class="highlight">{{ "%.2f"|format(analisis.rent_esperada) }}%</p>
+                <p>Utilidades estimadas: ${{ "%.2f"|format(analisis.utilidades) }}</p>
             </div>
             
             <div class="metrica">
-                <h3>Rentabilidad/Riesgo</h3>
-                <p>Esperada: {{ "%.1f"|format(analisis.rent_esperada) }}%</p>
+                <h3>Riesgos</h3>
                 <p>Peor caso (95%): {{ "%.1f"|format(analisis.var_95) }}%</p>
                 <p>Mejor caso: {{ "%.1f"|format(analisis.mejor_escenario) }}%</p>
             </div>
@@ -52,6 +59,19 @@
 
     {{ grafico|safe }}
     
+    <div class="leyenda">
+        <p>Leyenda del gráfico:</p>
+        <ul>
+            <li><span style="color: #1f77b4">●</span> Precio actual</li>
+            <li><span style="color: rgba(255, 0, 0, 0.3)">—</span> Banda Bollinger Superior</li>
+            <li><span style="color: rgba(0, 255, 0, 0.3)">—</span> Banda Bollinger Inferior</li>
+            <li><span style="color: orange">···</span> Media Móvil 30 días</li>
+            <li><span style="color: purple">···</span> Media Móvil 200 días</li>
+            <li>▲ Verde: Señal de compra</li>
+            <li>▼ Rojo: Señal de venta</li>
+        </ul>
+    </div>
+
     {% if analisis %}
     <div class="resultados">
         <h2>Métricas Clave</h2>
