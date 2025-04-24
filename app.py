@@ -135,7 +135,7 @@ def generar_grafico_plotly(df):
     """Crea gráfico con Bollinger Bands y señales"""
     fig = make_subplots(
         rows=1, cols=1,
-        subplot_titles=("Evolución del Tipo de Cambio con Indicadores",)
+        subplot_titles=("Evolución del Tipo de Cambio",)
     )
     
     # Precio y Bollinger Bands
@@ -144,7 +144,8 @@ def generar_grafico_plotly(df):
             x=df.index, 
             y=df['CUPs'], 
             name="Precio", 
-            line=dict(color='#1f77b4')),
+            line=dict(color='#1f77b4'),
+        showlegend=False),
         row=1, col=1)
     
     # Bollinger Bands
@@ -154,7 +155,7 @@ def generar_grafico_plotly(df):
             y=df['UpperBB'],
             name="Banda Superior",
             line=dict(color='rgba(255, 0, 0, 0.3)', width=1),
-            showlegend=True),
+            showlegend=False),
         row=1, col=1)
     
     fig.add_trace(
@@ -165,7 +166,7 @@ def generar_grafico_plotly(df):
             line=dict(color='rgba(0, 255, 0, 0.3)', width=1),
             fill='tonexty',
             fillcolor='rgba(100, 100, 100, 0.1)',
-            showlegend=True),
+            showlegend=False),
         row=1, col=1)
     
     # Medias móviles
@@ -174,7 +175,8 @@ def generar_grafico_plotly(df):
             x=df.index, 
             y=df['SMA30'], 
             name="SMA 30", 
-            line=dict(dash='dot', color='orange')),
+            line=dict(dash='dot', color='orange'),
+            showlegend=False),
         row=1, col=1)
     
     fig.add_trace(
@@ -182,7 +184,9 @@ def generar_grafico_plotly(df):
             x=df.index, 
             y=df['SMA200'], 
             name="SMA 200", 
-            line=dict(dash='dot', color='purple')),
+            line=dict(dash='dot', color='purple'), 
+            showlegend=False
+        ),
         row=1, col=1)
     
     # Señales de compra/venta
@@ -195,7 +199,9 @@ def generar_grafico_plotly(df):
             y=compras['CUPs'],
             mode='markers',
             marker=dict(symbol='triangle-up', size=10, color='green'),
-            name='Señal Compra')
+            name='Señal Compra',
+            showlegend=False
+        )
     )
     
     fig.add_trace(
@@ -204,7 +210,9 @@ def generar_grafico_plotly(df):
             y=ventas['CUPs'],
             mode='markers',
             marker=dict(symbol='triangle-down', size=10, color='red'),
-            name='Señal Venta')
+            name='Señal Venta',
+            showlegend=False
+        )
     )
     
     fig.update_layout(
