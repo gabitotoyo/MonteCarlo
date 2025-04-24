@@ -50,8 +50,28 @@ def procesar_datos_crudos(datos_api):
         return df
     return pd.DataFrame()
 
-def simular_montecarlo(df, capital=1000, simulaciones=10**6):
-    """Realiza simulación de Montecarlo y calcula recomendación"""
+def calcular_indicadores(df):
+    """Calcula indicadores técnicos"""
+    if df.empty:
+        return df
+    
+    # Medias móviles
+    df['SMA30'] = df['CUPs'].rolling(30, min_periods=1).mean()
+    df['SMA200'] = df['CUPs'].rolling(200, min_periods=1).mean()
+    
+    # Bollinger Bands
+    df['SMA20'] = df['CUPs'].rolling(20).mean()
+    df['UpperBB'] = df['SMA20'] + (2 * df['CUPs'].rolling(20).std())
+    df['LowerBB'] = df['SMA20'] - (2 * df['CUPs'].rolling(20).std())
+    
+    # Señales de trading
+    df['Cruce'] = np.where(df['SMA30'] > df['SMA200'], 1, -1)
+    df['Señal'] = df['Cruce'].diff()
+    
+    return df.dropna()
+
+def simular_montecarlo(df, capital=1000, meses=1, simulaciones=10**5):
+    """Realiza simulación de Montecarlo para múltiples meses"""
     if df.empty or len(df) < 2:
         return None
     
@@ -65,9 +85,13 @@ def simular_montecarlo(df, capital=1000, simulaciones=10**6):
     mu = retornos.mean()
     sigma = retornos.std()
     
-    # Simulación
+    # Simulación para múltiples meses
     np.random.seed(42)
-    sim_retornos = np.random.normal(mu, sigma, simulaciones)
+    sim_retornos = np.zeros(simulaciones)
+    
+    for _ in range(meses):
+        monthly_returns = np.random.normal(mu, sigma, simulaciones)
+        sim_retornos = (1 + sim_retornos) * (1 + monthly_returns) - 1
     
     # Probabilidades
     prob_subida = (sim_retornos > 0).mean() * 100
@@ -85,7 +109,8 @@ def simular_montecarlo(df, capital=1000, simulaciones=10**6):
         accion = "COMPRAR" if inversion > 0 else "VENDER"
     
     # Rentabilidad esperada
-    rent_esperada = np.mean(sim_retornos) * abs(inversion)/capital * 100
+    rent_esperada = np.mean(sim_retornos) * 100
+    utilidades = capital * (rent_esperada / 100)
     
     # Calculo de riesgos
     var_95 = np.percentile(sim_retornos, 5) * 100
@@ -98,23 +123,22 @@ def simular_montecarlo(df, capital=1000, simulaciones=10**6):
         'accion': accion,
         'inversion': abs(inversion),
         'rent_esperada': rent_esperada,
+        'utilidades': utilidades,
         'var_95': var_95,
         'mejor_escenario': mejor_escenario,
         'mu': mu * 100,
-        'sigma': sigma * 100
+        'sigma': sigma * 100,
+        'meses': meses
     }
 
 def generar_grafico_plotly(df):
-    """Crea gráficos interactivos"""
+    """Crea gráfico con Bollinger Bands y señales"""
     fig = make_subplots(
-        rows=2, cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.1,
-        subplot_titles=("Evolución del Tipo de Cambio", "Distribución Histórica"),
-        row_heights=[0.7, 0.3]
+        rows=1, cols=1,
+        subplot_titles=("Evolución del Tipo de Cambio con Indicadores",)
     )
     
-    # Gráfico principal
+    # Precio y Bollinger Bands
     fig.add_trace(
         go.Scatter(
             x=df.index, 
@@ -123,19 +147,71 @@ def generar_grafico_plotly(df):
             line=dict(color='#1f77b4')),
         row=1, col=1)
     
-    # Histograma
+    # Bollinger Bands
     fig.add_trace(
-        go.Histogram(
-            x=df['CUPs'], 
-            name="Distribución", 
-            marker_color='#2ca02c',
-            nbinsx=50),
-        row=2, col=1)
+        go.Scatter(
+            x=df.index,
+            y=df['UpperBB'],
+            name="Banda Superior",
+            line=dict(color='rgba(255, 0, 0, 0.3)', width=1),
+            showlegend=True),
+        row=1, col=1)
+    
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df['LowerBB'],
+            name="Banda Inferior",
+            line=dict(color='rgba(0, 255, 0, 0.3)', width=1),
+            fill='tonexty',
+            fillcolor='rgba(100, 100, 100, 0.1)',
+            showlegend=True),
+        row=1, col=1)
+    
+    # Medias móviles
+    fig.add_trace(
+        go.Scatter(
+            x=df.index, 
+            y=df['SMA30'], 
+            name="SMA 30", 
+            line=dict(dash='dot', color='orange')),
+        row=1, col=1)
+    
+    fig.add_trace(
+        go.Scatter(
+            x=df.index, 
+            y=df['SMA200'], 
+            name="SMA 200", 
+            line=dict(dash='dot', color='purple')),
+        row=1, col=1)
+    
+    # Señales de compra/venta
+    compras = df[df['Señal'] == 2]
+    ventas = df[df['Señal'] == -2]
+    
+    fig.add_trace(
+        go.Scatter(
+            x=compras.index,
+            y=compras['CUPs'],
+            mode='markers',
+            marker=dict(symbol='triangle-up', size=10, color='green'),
+            name='Señal Compra')
+    )
+    
+    fig.add_trace(
+        go.Scatter(
+            x=ventas.index,
+            y=ventas['CUPs'],
+            mode='markers',
+            marker=dict(symbol='triangle-down', size=10, color='red'),
+            name='Señal Venta')
+    )
     
     fig.update_layout(
-        height=800,
-        title_text="Análisis del Dólar Informal en Cuba",
-        template="plotly_white"
+        height=600,
+        title_text="Análisis Técnico del Dólar Informal",
+        template="plotly_white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02)
     )
     
     return fig.to_html(full_html=False)
@@ -143,24 +219,29 @@ def generar_grafico_plotly(df):
 @app.route("/", methods=['GET', 'POST'])
 def home():
     """Endpoint principal"""
-    capital = 1000  # Valor por defecto
+    capital = 1000  # Valores por defecto
+    meses = 1
     
     if request.method == 'POST':
         capital = float(request.form.get('capital', 1000))
+        meses = int(request.form.get('meses', 1))
     
     df = obtener_datos_actuales()
     
-    if df.empty:
-        return render_template("index.html", grafico="<p>Error cargando datos</p>")
-    
-    analisis = simular_montecarlo(df, capital)
-    grafico = generar_grafico_plotly(df)
+    if not df.empty:
+        df = calcular_indicadores(df)
+        analisis = simular_montecarlo(df, capital, meses)
+        grafico = generar_grafico_plotly(df)
+    else:
+        analisis = None
+        grafico = "<p>Error cargando datos</p>"
     
     return render_template(
         "index.html",
         grafico=grafico,
         analisis=analisis,
-        capital=capital
+        capital=capital,
+        meses=meses
     )
 
 if __name__ == "__main__":
