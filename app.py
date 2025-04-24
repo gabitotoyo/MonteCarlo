@@ -70,7 +70,7 @@ def calcular_indicadores(df):
     
     return df.dropna()
 
-def simular_montecarlo(df, capital=1000, meses=1, simulaciones=10**5):
+def simular_montecarlo(df, capital=1000, meses=1, simulaciones=10**10):
     """Realiza simulación de Montecarlo para múltiples meses"""
     if df.empty or len(df) < 2:
         return None
